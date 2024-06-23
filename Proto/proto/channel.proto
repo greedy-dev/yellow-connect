@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+import "core.proto";
+import "state.proto";
+
+option go_package = "github.com/layer-3/clearport/proto";
+
+service Channel {
+  rpc Open(ChannelState) returns (core.Signature);
+  rpc Update(ChannelState) returns (core.Signature);
+  rpc Close(ChannelState) returns (core.Signature);
+
+  rpc SubscribeTrades(SubscribeTradesRequest) returns (stream core.Trade);
+}
+
+message SubscribeTradesRequest {
+  string channel_id = 1;
+  string last_external_id = 2;
+}
+
+message ChannelState {
+  core.State state = 1;
+  string state_hash = 2;
+  core.Signature state_sig = 3;
+}

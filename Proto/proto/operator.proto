@@ -1,0 +1,190 @@
+syntax = "proto3";
+
+import "auth.proto";
+import "core.proto";
+import "session_key.proto";
+import "settlement.proto";
+import "state_machine.proto";
+
+option go_package = "github.com/layer-3/clearport/proto";
+
+// protolint:disable MAX_LINE_LENGTH
+service Operator {
+  rpc GetVersion(VersionRequest) returns (VersionResponse);
+  rpc GetChallenge(GetChallengeRequest) returns (GetChallengeResponse);
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+
+  rpc OpenChannel(OpenChannelRequest) returns (OpenChannelResponse);
+  rpc GetChannelJwt(GetJwtRequest) returns (GetJwtResponse);
+  rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse);
+  rpc RecordTrade(TradeRequest) returns (TradeResponse);
+  rpc RecordTrades(TradesRequest) returns (TradesResponse);
+  rpc RequestSettlement(SettlementRequest) returns (SettlementResponse);
+  rpc CloseChannel(CloseChannelRequest) returns (CloseChannelResponse);
+
+  rpc SubscribeChannelsEvents(SubscribeRequest) returns (stream Notification);
+}
+
+message VersionRequest {
+}
+
+message VersionResponse {
+  string version = 1;
+}
+
+message GetChallengeRequest {
+  core.Address address = 1;
+  string name = 2;
+}
+
+message GetChallengeResponse {
+  string challenge = 1;
+}
+
+message AuthenticateRequest {
+  string signature = 2;
+  core.Address address = 3;
+}
+
+message AuthenticateResponse {
+  string jwt = 1;
+}
+
+message TradeRequest {
+  core.Trade trade = 1;
+}
+
+message TradeResponse {
+  core.Trade trade = 1;
+}
+
+// Maximum number of trades per request is 6765
+message TradesRequest {
+  repeated core.Trade trades = 1;
+}
+
+message TradesResponse {
+}
+
+message OpenChannelRequest {
+  auth.Peer peer = 1;
+  string margin_deposit = 2;
+}
+
+message OpenChannelResponse{
+  string channel_id = 1;
+}
+
+message GetJwtRequest {
+  string channel_id = 1;
+}
+
+message GetJwtResponse {
+  string jwt = 1;
+}
+
+message CloseChannelRequest {
+  string channel_id = 1;
+}
+
+message CloseChannelResponse {
+}
+
+message SubscribeRequest {
+}
+
+message Notification {
+  oneof notification {
+    StreamNotification stream_notification = 1;
+    SettlementNotification settlement_notification = 2;
+    PositionNotification position_notification = 3;
+    ErrorNotification error_notification = 4;
+    TransactionNotification transaction_notification = 5;
+    SessionKeyTransactionNotification session_key_transaction_notification = 6;
+  }
+}
+
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_CHANNEL_OPENING = 1;
+  NOTIFICATION_TYPE_CHANNEL_OPENED = 2;
+  NOTIFICATION_TYPE_CHANNEL_CLOSED = 3;
+  NOTIFICATION_TYPE_CHALLENGE_STARTED = 4;
+  NOTIFICATION_TYPE_CHALLENGE_CLEARED = 5;
+  NOTIFICATION_TYPE_CHALLENGE_FINISHED = 6;
+  NOTIFICATION_TYPE_MARGIN_UPDATED = 7;
+}
+
+enum ChannelStatus {
+  CHANNEL_STATUS_UNSPECIFIED = 0;
+  CHANNEL_STATUS_OPENING = 1;
+  CHANNEL_STATUS_OPEN = 2;
+  CHANNEL_STATUS_CHALLENGING = 3;
+  CHANNEL_STATUS_CLOSED = 4;
+}
+
+message StreamNotification {
+  string channel_id = 1;
+  NotificationType notification_type = 2;
+  ChannelStatus channel_status = 3;
+  core.ProtocolIndex my_role = 4;
+  auth.Peer peer = 5;
+  core.MarginLimitType margin_limit_type = 6;
+  string margin_deposit = 7;
+  string initiator_margin_balance = 8; // margin updates will be reflected here
+  string follower_margin_balance = 9; // margin updates will be reflected here
+  uint64 turn_num = 10;
+  state_machine.ClearingSMState clearing_sm_state = 11;
+}
+
+message SettlementNotification {
+  string channel_id = 1;
+  settlement.SettlementState settlement_state = 2;
+}
+
+message PositionNotification {
+  core.Position position = 1;
+}
+
+message TransactionNotification {
+  string to = 1;
+  string data = 2;
+}
+
+message ErrorNotification {
+  string msg = 2;
+  ErrorMetadata metadata = 4;
+  string action = 5;
+}
+
+message SessionKeyTransactionNotification {
+  IncompleteUserOp incomplete_userop = 1;
+  uint64 enable_sig_offset = 2;
+  string digest_hash = 3;
+  repeated SessionKeyPermission permissions = 4;
+}
+
+message SettlementRequest {
+  string channel_id = 1;
+  settlement.PaymentMethod payment_method = 2;
+  uint64 chain_id = 3;
+  repeated core.Market markets = 4;
+}
+
+message SettlementResponse {
+}
+
+message GetPositionsRequest {
+  string channel_id = 1;
+}
+
+message GetPositionsResponse {
+  string channel_id = 1;
+  repeated core.Position positions = 2;
+}
+
+message ErrorMetadata {
+  string channel_id = 1;
+  string state = 3;
+  string event = 4;
+}
